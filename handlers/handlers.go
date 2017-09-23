@@ -8,7 +8,7 @@ import (
 	"log"
 	"net/http"
 	"os"
-	
+
 	"github.com/BaapAPI/structs"
 	"github.com/gin-gonic/contrib/sessions"
 	"github.com/gin-gonic/gin"
@@ -113,7 +113,7 @@ func AuthHandler(c *gin.Context) {
 	   			return
 	   		}
 	   	} */
-	c.HTML(http.StatusOK, "battle.tmpl", gin.H{"email": u.Email, "seen": seen})
+	c.HTML(http.StatusOK, "hello.tmpl", gin.H{"email": u.Email, "seen": seen})
 }
 
 // LoginHandler handles the login procedure.
