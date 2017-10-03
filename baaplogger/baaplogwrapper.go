@@ -1,6 +1,7 @@
 package baaplogger
 
 import (
+	"path/filepath"
 	"time"
 )
 
@@ -17,6 +18,16 @@ const (
 )
 
 var levelPrefix = [LevelDebug + 1]string{"[Emergency] ", "[Alert] ", "[Critical] ", "[Error]", "[Warning] ", "[Notice] ", "[Informational] ", "[Debug] "}
+var (
+	//Log for baap service
+	Log *Baaplogger
+	//Ginlog for gin service
+	Ginlog *Logger
+)
+
+func init() {
+	initlogger()
+}
 
 //Baaplogger log for baap service
 type Baaplogger struct {
@@ -93,4 +104,31 @@ func (bl *Baaplogger) Debug(format string, v ...interface{}) {
 		return
 	}
 	bl.writeMsg(LevelDebug, format, v...)
+}
+
+func initlogger() {
+	dir, err := filepath.Abs("log")
+	if err != nil {
+		panic(err)
+	}
+
+	// this for baap API log
+	Log = &Baaplogger{
+		Level: LevelDebug,
+		Log: &Logger{
+			Filename:   filepath.Join(dir, "baap.log"),
+			MaxSize:    500, // megabytes
+			MaxBackups: 6,
+			MaxAge:     28, // days
+		},
+	}
+
+	// this for log inforamtion in gin
+	Ginlog = &Logger{
+		Filename:   filepath.Join(dir, "gin.log"),
+		MaxSize:    500, // megabytes
+		MaxBackups: 6,
+		MaxAge:     28, // days
+	}
+
 }
