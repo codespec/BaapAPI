@@ -1,6 +1,7 @@
 package baaplogger
 
 import (
+	"fmt"
 	"path/filepath"
 	"time"
 )
@@ -36,7 +37,12 @@ type Baaplogger struct {
 }
 
 func (bl *Baaplogger) writeMsg(logLevel int, msg string, v ...interface{}) (int, error) {
+
 	when := time.Now()
+
+	if len(v) > 0 {
+		msg = fmt.Sprintf(msg, v...)
+	}
 	msg = when.Format("2006-01-02 15:04:05.000") + " " + levelPrefix[logLevel] + msg + "\n"
 
 	return bl.Log.Write([]byte(msg))

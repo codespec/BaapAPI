@@ -5,10 +5,10 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"os"
 
+	. "github.com/BaapAPI/baaplogger"
 	"github.com/BaapAPI/structs"
 	"github.com/gin-gonic/contrib/sessions"
 	"github.com/gin-gonic/gin"
@@ -53,7 +53,7 @@ func getLoginURL(state, provider string) string {
 func init() {
 	file, err := ioutil.ReadFile("./client_secret.json")
 	if err != nil {
-		log.Printf("File error: %v\n", err)
+		Log.Error("File error: %v\n", err)
 		os.Exit(1)
 	}
 	json.Unmarshal(file, &procred)
@@ -90,14 +90,14 @@ func GoogleAuthHandler(c *gin.Context) {
 	retrievedState := session.Get("state")
 	queryState := c.Request.URL.Query().Get("state")
 	if retrievedState != queryState {
-		log.Printf("Invalid session state: retrieved: %s; Param: %s", retrievedState, queryState)
+		Log.Error("Invalid session state: retrieved: %s; Param: %s", retrievedState, queryState)
 		c.HTML(http.StatusUnauthorized, "error.tmpl", gin.H{"message": "Invalid session state."})
 		return
 	}
 	code := c.Request.URL.Query().Get("code")
 	tok, err := gooleconf.Exchange(oauth2.NoContext, code)
 	if err != nil {
-		log.Println(err)
+		Log.Error(err.Error())
 		c.HTML(http.StatusBadRequest, "error.tmpl", gin.H{"message": "Login failed. Please try again."})
 		return
 	}
@@ -105,7 +105,7 @@ func GoogleAuthHandler(c *gin.Context) {
 	client := gooleconf.Client(oauth2.NoContext, tok)
 	userinfo, err := client.Get("https://www.googleapis.com/oauth2/v3/userinfo")
 	if err != nil {
-		log.Println(err)
+		Log.Error(err.Error())
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
@@ -113,17 +113,20 @@ func GoogleAuthHandler(c *gin.Context) {
 	data, _ := ioutil.ReadAll(userinfo.Body)
 	u := structs.GoogleUser{}
 	if err = json.Unmarshal(data, &u); err != nil {
-		log.Println(err)
+		Log.Error(err.Error())
 		c.HTML(http.StatusBadRequest, "error.tmpl", gin.H{"message": "Error marshalling response. Please try agian."})
 		return
 	}
 	session.Set("user-id", u.Email)
 	err = session.Save()
 	if err != nil {
-		log.Println(err)
+		Log.Error(err.Error())
 		c.HTML(http.StatusBadRequest, "error.tmpl", gin.H{"message": "Error while saving session. Please try again."})
 		return
 	}
+
+	Log.Debug("google user login: " + u.Email)
+
 	seen := false
 	/* 	db := database.MongoDBConnection{}
 	   	if _, mongoErr := db.LoadUser(u.Email); mongoErr == nil {
@@ -144,14 +147,14 @@ func FaceBookAuthHandler(c *gin.Context) {
 	retrievedState := c.Request.FormValue("state")
 	queryState := c.Request.URL.Query().Get("state")
 	if retrievedState != queryState {
-		log.Printf("Invalid session state: retrieved: %s; Param: %s", retrievedState, queryState)
+		Log.Error("Invalid session state: retrieved: %s; Param: %s", retrievedState, queryState)
 		c.HTML(http.StatusUnauthorized, "error.tmpl", gin.H{"message": "Invalid session state."})
 		return
 	}
 	code := c.Request.URL.Query().Get("code")
 	tok, err := facebookconf.Exchange(oauth2.NoContext, code)
 	if err != nil {
-		log.Println(err)
+		Log.Error(err.Error())
 		c.HTML(http.StatusBadRequest, "error.tmpl", gin.H{"message": "Login failed. Please try again."})
 		return
 	}
@@ -159,7 +162,7 @@ func FaceBookAuthHandler(c *gin.Context) {
 	client := facebookconf.Client(oauth2.NoContext, tok)
 	userinfo, err := client.Get("https://graph.facebook.com/me?")
 	if err != nil {
-		log.Println(err)
+		Log.Error(err.Error())
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
@@ -167,29 +170,14 @@ func FaceBookAuthHandler(c *gin.Context) {
 	data, _ := ioutil.ReadAll(userinfo.Body)
 	u := structs.FaceBookUser{}
 	if err = json.Unmarshal(data, &u); err != nil {
-		log.Println(err)
+		Log.Error(err.Error())
 		c.HTML(http.StatusBadRequest, "error.tmpl", gin.H{"message": "Error marshalling response. Please try agian."})
 		return
 	}
-	//session.Set("user-id", u.Email)
-	/* err = session.Save()
-	if err != nil {
-		log.Println(err)
-		c.HTML(http.StatusBadRequest, "error.tmpl", gin.H{"message": "Error while saving session. Please try again."})
-		return
-	} */
+	Log.Debug("facebook user login: " + u.Name + " id: " + u.ID)
+
 	seen := false
-	/* 	db := database.MongoDBConnection{}
-	   	if _, mongoErr := db.LoadUser(u.Email); mongoErr == nil {
-	   		seen = true
-	   	} else {
-	   		err = db.SaveUser(&u)
-	   		if err != nil {
-	   			log.Println(err)
-	   			c.HTML(http.StatusBadRequest, "error.tmpl", gin.H{"message": "Error while saving user. Please try again."})
-	   			return
-	   		}
-	   	} */
+
 	c.HTML(http.StatusOK, "hello.tmpl", gin.H{"info": "facebook user:" + u.Name, "seen": seen})
 }
 
@@ -198,7 +186,7 @@ func LoginHandler(c *gin.Context) {
 	state := RandToken(32)
 	session := sessions.Default(c)
 	session.Set("state", state)
-	log.Printf("Stored session: %v\n", state)
+	Log.Informational("Stored session: %v\n", state)
 	session.Save()
 	glink := getLoginURL(state, "google")
 	flink := getLoginURL(state, "facebook")
