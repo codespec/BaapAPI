@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/BaapAPI/baapDB"
 	. "github.com/BaapAPI/baaplogger"
 	"github.com/BaapAPI/structs"
 	"github.com/gin-gonic/contrib/sessions"
@@ -127,19 +128,13 @@ func GoogleAuthHandler(c *gin.Context) {
 
 	Log.Debug("google user login: " + u.Email)
 
-	seen := false
-	/* 	db := database.MongoDBConnection{}
-	   	if _, mongoErr := db.LoadUser(u.Email); mongoErr == nil {
-	   		seen = true
-	   	} else {
-	   		err = db.SaveUser(&u)
-	   		if err != nil {
-	   			log.Println(err)
-	   			c.HTML(http.StatusBadRequest, "error.tmpl", gin.H{"message": "Error while saving user. Please try again."})
-	   			return
-	   		}
-	   	} */
-	c.HTML(http.StatusOK, "hello.tmpl", gin.H{"info": "google user:" + u.Email, "seen": seen})
+	exist, _ := baapDB.IsUserExist("google", u.Email)
+
+	if !exist {
+		baapDB.AddGoogleUser(u.Email, u.Name)
+	}
+
+	c.HTML(http.StatusOK, "hello.tmpl", gin.H{"info": "google user:" + u.Name, "seen": exist})
 }
 
 // FaceBookAuthHandler handles authentication of a user and initiates a session.
@@ -176,9 +171,13 @@ func FaceBookAuthHandler(c *gin.Context) {
 	}
 	Log.Debug("facebook user login: " + u.Name + " id: " + u.ID)
 
-	seen := false
+	exist, _ := baapDB.IsUserExist("facebook", u.ID)
 
-	c.HTML(http.StatusOK, "hello.tmpl", gin.H{"info": "facebook user:" + u.Name, "seen": seen})
+	if !exist {
+		baapDB.AddFacebookUser(u.ID, u.Name)
+	}
+
+	c.HTML(http.StatusOK, "hello.tmpl", gin.H{"info": "facebook user:" + u.Name, "seen": exist})
 }
 
 // LoginHandler handles the login procedure.

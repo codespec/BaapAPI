@@ -13,6 +13,7 @@ import (
 func main() {
 	Log.Informational("service start")
 	gin.DefaultWriter = io.MultiWriter(Ginlog, os.Stdout)
+	gin.DefaultErrorWriter = gin.DefaultWriter
 	router := gin.Default()
 
 	store := sessions.NewCookieStore([]byte(handlers.RandToken(64)))
@@ -21,6 +22,7 @@ func main() {
 		MaxAge: 86400 * 7,
 	})
 	router.Use(gin.Logger())
+
 	router.Use(gin.Recovery())
 	router.Use(sessions.Sessions("goquestsession", store))
 
